@@ -220,8 +220,19 @@ if ((arguments.size() == 4) && (arguments[2] == QString("-n")))
 }
 #endif
 
-	//attach成功表示已经存在该内存了，表示当前存在实例
-	if (shared.attach())//共享内存被占用则直接返回
+	// 参考 https://stackoverflow.com/questions/42549904/qsharedmemory-is-not-getting-deleted-on-application-crash
+	// 以及 https://forum.qt.io/topic/114838/clear-qsharedmemory-after-crash
+	// 在 linux 中，如果 上一个进程 crash 了，共享内存不会释放
+	bool bMultiInstance = false;
+	if (shared.attach()) {
+		printf("%s[%d]shared memory exist!\n", __func__, __LINE__);
+		shared.detach();
+		if (shared.attach()) {
+			printf("%s[%d]shared memory still exist!\n", __func__, __LINE__);
+			bMultiInstance = true;
+		}
+	}
+	if (bMultiInstance)//共享内存被占用则直接返回
 	{
 		//发现在文件中如果存在空格时，参数不止1个，所以不能单纯用2个参数表示
 		if (arguments.size() > 1)
